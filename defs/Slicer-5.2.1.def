@@ -1,0 +1,45 @@
+Bootstrap: docker
+From: debian:bullseye-slim
+
+%post
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update
+    apt-get -y install tar wget
+    apt-get -y install libpulse-dev libnss3 libglu1-mesa
+    apt-get -y install --reinstall libxcb-xinerama0
+    # export QT_DEBUG_PLUGINS=1
+    apt-get -y install libsm6 libxrender1 libxcb-* libxkbcommon-x11-0
+    [ -f /usr/lib/x86_64-linux-gnu/libxcb-util.so.1 ] || ln -s /usr/lib/x86_64-linux-gnu/libxcb-util.so /usr/lib/x86_64-linux-gnu/libxcb-util.so.1
+    [ -f /tmp/Slicer-5.2.1-linux-amd64.tar.gz ] || wget -O/tmp/Slicer-5.2.1-linux-amd64.tar.gz https://slicer-packages.kitware.com/api/v1/item/637f7a7f517443dc5dc7326e/download
+    tar xzf /tmp/Slicer-5.2.1-linux-amd64.tar.gz -C/opt
+
+%environment
+    export SLICER_VERSION="5.2.1"
+    export LANG="C.UTF-8"
+    export PATH="/opt/Slicer-5.2.1-linux-amd64/bin:$PATH"
+
+%test
+    exit 0
+
+%runscript
+    [ $# -eq 0 ] && exec SlicerDesigner
+    [ "$1" == "-"* ] && exec SlicerDesigner $@
+    exec $@
+
+%labels
+    au.imagingtools.cvl.xdg.icon https://www.slicer.org/w/img_auth.php/2/2d/3DSlicerLogo-DesktopIcon-48x48x16.png
+    au.imagingtools.cvl.xdg.generic-name 3D Slicer
+    org.opencontainers.image.created $(date --rfc-3339=seconds --utc)
+    org.opencontainers.image.authors Dean Taylor <dean.taylor@sydney.edu.au>
+    org.opencontainers.image.url https://www.slicer.org
+    org.opencontainers.image.documentation https://slicer.readthedocs.io/en/latest/
+    org.opencontainers.image.source https://github.com/SydneyResearchTech/CharacterisationVL-Software/tree/master/3dslicer
+    org.opencontainers.image.version 5.2.1
+    org.opencontainers.image.revision $(git -C ${CVL_SOFTWARE} rev-parse --short HEAD)
+    org.opencontainers.image.vendor The University of Sydney
+    org.opencontainers.image.licenses https://github.com/Slicer/Slicer/blob/main/License.txt
+    org.opencontainers.image.title 3D Slicer
+    org.opencontainers.image.description Imaging computing platform
+
+%help
+    Slicer-5.2.1.sif --help
