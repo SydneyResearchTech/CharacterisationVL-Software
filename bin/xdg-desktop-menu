@@ -9,6 +9,23 @@ import subprocess
 import json
 import sys, getopt
 import configparser
+from urllib.request import urlopen
+from urllib.parse import urlparse
+
+def applicationsMenu(xdgConfigDir,desktop="mate"):
+    lines = [
+            '<!DOCTYPE Menu PUBLIC "-//freedesktop//DTD Menu 1.0//EN"',
+            ' "http://www.freedesktop.org/standards/menu-spec/1.0/menu.dtd">',
+            '<Menu>',
+            '  <Name>Applications</Name>',
+            '  <MergeFile>/etc/xdg/menus/'+desktop+'-applications.menu</MergeFile>',
+            '  <MergeDir>'+xdgConfigDir+'/menus/applications-merged</MergeDir>',
+            '</Menu>'
+            ]
+    _file = os.path.join(xdgConfigDir,'menus',desktop+'-applications.menu')
+    with open(_file,'w') as f:
+        f.writelines(lines)
+    print('Created '+_file)
 
 def newMenu(parent, name):
     _menu = ET.SubElement(parent, "Menu")
@@ -16,17 +33,21 @@ def newMenu(parent, name):
     ET.SubElement(_menu, "Directory").text = name.replace(" ","_") +".directory"
     return ET.SubElement(_menu, "Include")
 
-def directory(name,xdgDataDir):
+def directory(name,xdgDir,icon=None):
     desktop = configparser.ConfigParser()
     desktop.optionxform = str
     desktop['Desktop Entry'] = {
             'Name': name,
             'Type': 'Directory',
             }
-    with open(xdgDataDir+'/desktop-directories/'+name+'.directory','w') as f:
+    if icon:
+        desktop['Desktop Entry']['Icon'] = icon
+    _file = os.path.join(xdgDir,name+'.directory')
+    with open(_file,'w') as f:
         desktop.write(f,space_around_delimiters=False)
+    print('Created '+_file)
 
-def application(name,xdgDataDir,binDir):
+def application(name,xdgDir,binDir,icon=None):
     application = configparser.ConfigParser()
     application.optionxform = str
     application['Desktop Entry'] = {
@@ -34,29 +55,76 @@ def application(name,xdgDataDir,binDir):
             'Name': name,
             'Type': 'Application',
             }
-    with open(xdgDataDir+'/applications/'+name+'.desktop','w') as f:
+    if icon:
+        application['Desktop Entry']['Icon'] = icon
+    _file = os.path.join(xdgDir,name+'.desktop')
+    with open(_file,'w') as f:
         application.write(f,space_around_delimiters=False)
+    print('Created '+_file)
+
+def getApptainerAnnotations(sif="/vol/cvl/bin/Slicer-5.2.1.sif"):
+    _annotations = json.loads(
+        subprocess.run(
+            ['apptainer','inspect','--labels','--json',sif],
+            capture_output=True,encoding='utf-8').stdout
+        )
+    return(_annotations['data']['attributes']['labels'])
+
+def getIcon(icon,destDir):
+    _dest = None
+    if icon:
+        try:
+            _iconUrl = urlparse(icon)
+            _dest = os.path.join(destDir,os.path.basename(_iconUrl.path))
+            if os.path.exists(_dest):
+                print('Exists '+_dest)
+            else:
+                with urlopen(icon) as f:
+                    content = f.read()
+                with open(_dest,'wb') as f:
+                    f.write(content)
+                print('Created '+_dest)
+        except Exception as e:
+            print(e)
+            _dest = None
+    return(_dest)
 
 def main(argv):
     baseDir = '/vol/cvl'
     opts,args = getopt.getopt(argv,"b:h",["baseDir=","help"])
     for opt,arg in opts:
         if opt in ("-h","--help"):
-            print('xdg-desktop-menu [-h|--help]')
+            print('xdg-desktop-menu -b <baseDir> -h')
             sys.exit()
         elif opt in ("-b","--baseDir"):
             baseDir = arg
-    xdgConfigDir = baseDir+'/config'
-    xdgDataDir = baseDir+'/usr/share'
-    binDir = baseDir+'/bin'
+    xdgConfigDir = os.path.join(baseDir,'config')
+    xdgDataDir = os.path.join(baseDir,'usr','share')
+    binDir = os.path.join(baseDir,'bin')
+
+    xdgApplicationsMerged = os.path.join(xdgConfigDir,'menus','applications-merged')
+    xdgAutostart = os.path.join(xdgConfigDir,'autostart')
+    xdgApplications = os.path.join(xdgDataDir,'applications')
+    xdgDesktopDirectories = os.path.join(xdgDataDir,'desktop-directories')
+    xdgIcons = os.path.join(xdgDataDir,'icons')
+    if not os.path.exists(xdgApplicationsMerged):
+        os.makedirs(xdgApplicationsMerged)
+    if not os.path.exists(xdgAutostart):
+        os.makedirs(xdgAutostart)
+    if not os.path.exists(xdgApplications):
+        os.makedirs(xdgApplications)
+    if not os.path.exists(xdgDesktopDirectories):
+        os.makedirs(xdgDesktopDirectories)
+    if not os.path.exists(xdgIcons):
+        os.makedirs(xdgIcons)
 
     subMenu = {}
     menu = ET.Element("Menu")
     ET.SubElement(menu, "Name").text = "Applications"
 
     menuCvl = ET.SubElement(menu, "Menu")
-    ET.SubElement(menuCvl, "AppDir").text = xdgDataDir+"/applications"
-    ET.SubElement(menuCvl, "DirectoryDir").text = xdgDataDir+"/desktop-directories"
+    ET.SubElement(menuCvl, "AppDir").text = xdgApplications
+    ET.SubElement(menuCvl, "DirectoryDir").text = xdgDesktopDirectories
     ET.SubElement(menuCvl, "Name").text = "CVL"
     ET.SubElement(menuCvl, "Directory").text = "CVL.directory"
     directory('CVL',xdgDataDir)
@@ -66,19 +134,27 @@ def main(argv):
     for sif in list(glob.glob(binDir+'/*.sif')):
         _application = os.path.splitext(os.path.basename(sif))[0]
         _desktop = os.path.splitext(os.path.basename(sif))[0]+'.desktop'
-        _labels = json.loads(subprocess.run(["apptainer","inspect","--json","--labels",sif],capture_output=True).stdout)
+        _labels = getApptainerAnnotations(sif)
         _menuName = "Archived"
-        if "au.imagingtools.cvl.xdg.generic-name" in _labels["data"]["attributes"]["labels"]:
-            _menuName = _labels["data"]["attributes"]["labels"]["au.imagingtools.cvl.xdg.generic-name"]
+        _icon = None
+        _iconPath = None
+        if "au.imagingtools.cvl.xdg.generic-name" in _labels:
+            _menuName = _labels["au.imagingtools.cvl.xdg.generic-name"]
+        if "au.imagingtools.cvl.xdg.icon" in _labels:
+            _icon = _labels["au.imagingtools.cvl.xdg.icon"]
+            _iconPath = getIcon(_icon,xdgIcons)
         if _menuName not in subMenu:
-            directory(_menuName,xdgDataDir)
+            directory(_menuName,xdgDesktopDirectories,_iconPath)
             subMenu[_menuName] = newMenu(menuCvl, _menuName)
         ET.SubElement(subMenu[_menuName], "Filename").text = _application+'.desktop'
-        application(_application,xdgDataDir,binDir)
+        application(_application,xdgApplications,binDir,_iconPath)
 
-    with open(xdgConfigDir+'/menus/applications-merged/cvl-cvl.menu','w') as f:
+    with open(os.path.join(xdgApplicationsMerged,'cvl-cvl.menu'),'w') as f:
         f.write('<!DOCTYPE Menu PUBLIC "-//freedesktop//DTD Menu 1.0//EN" "http://www.freedesktop.org/standards/menu-spec/menu-1.0.dtd">')
         ET.ElementTree(menu).write(f,'unicode')
+    print("Created "+os.path.join(xdgApplicationsMerged,'cvl-cvl.menu'))
+
+    applicationsMenu(xdgConfigDir,"mate")
 
     return 0
 
