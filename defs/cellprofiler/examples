@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+#
+EXAMPLES_DIR="${HOME}/CellProfiler-examples"
+
+function cleanup () {
+	[[ -d $TMPDIR ]] && rm -rf $TMPDIR
+}
+trap cleanup EXIT
+
+# Sanity checks
+[[ -d ${EXAMPLES_DIR} ]] && { >&2 echo ${EXAMPLES_DIR} already exists; exit 0; }
+TMPDIR=$(mktemp -d)
+
+cat <<EOT |wget -q -i - -nc -P $TMPDIR 
+https://cellprofiler-examples.s3.amazonaws.com/ExampleHuman.zip
+https://cellprofiler-examples.s3.amazonaws.com/ExampleFly.zip
+https://cellprofiler-examples.s3.amazonaws.com/ExampleTumor.zip
+https://cellprofiler-examples.s3.amazonaws.com/ExampleCometAssay.zip
+https://cellprofiler-examples.s3.amazonaws.com/ExamplePercentPositive.zip
+https://cellprofiler-examples.s3.amazonaws.com/ExampleYeastColonies.zip
+https://cellprofiler-examples.s3.amazonaws.com/ExampleYeastPatches.zip
+https://cellprofiler-examples.s3.amazonaws.com/ExampleNeighbors.zip
+https://cellprofiler-examples.s3.amazonaws.com/ExampleWoundHealing.zip
+https://cellprofiler-examples.s3.amazonaws.com/ExampleIlluminationCorrection.zip
+https://cellprofiler-examples.s3.amazonaws.com/ExampleColocalization.zip
+https://cellprofiler-examples.s3.amazonaws.com/ExampleVitraImages.zip
+https://cellprofiler-examples.s3.amazonaws.com/ExampleImagingFlowCytometryObjectsInGrid.zip
+https://cellprofiler-examples.s3.amazonaws.com/ExampleSpeckles.zip
+https://cellprofiler-examples.s3.amazonaws.com/ExampleTrackObjects.zip
+EOT
+
+for ZIP in $TMPDIR/*.zip; do
+	[[ -f $ZIP ]] || continue
+	FILENAME=$(basename -- $ZIP)
+	NAME="${FILENAME%.*}"
+	mkdir -p ${EXAMPLES_DIR}/${NAME}
+	unzip -u -x -d ${EXAMPLES_DIR}/${NAME} -q $ZIP
+done

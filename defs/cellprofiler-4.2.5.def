@@ -1,0 +1,56 @@
+Bootstrap: docker
+From: debian:bullseye-slim
+
+%post
+    CELLPROFILER_VERSION='4.2.5'
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update
+    apt-get -y install \
+      build-essential \
+      make \
+      gcc \
+      openjdk-11-jdk-headless \
+      python3 python3-pip \
+      libmariadb-dev \
+      libgtk-3-dev \
+      libnotify-dev \
+      libsdl2-dev \
+      wget \
+      unzip \
+      locales
+    export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+    python3 -m pip install numpy
+    python3 -m pip install cellprofiler==${CELLPROFILER_VERSION}
+    sed -i '/en_US.UTF-8/s/^# //' /etc/locale.gen
+    locale-gen
+
+%environment
+    export CELLPROFILER_VERSION="4.2.5"
+    export LANG="C.UTF-8"
+    export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+
+%test
+    exit 0
+
+%runscript
+    [ $# -eq 0 ] && exec cellprofiler -h
+    [ "${1%${1#?}}"x = '-x' ] && exec cellprofiler $@
+    exec $@
+
+%labels
+    au.imagingtools.cvl.xdg.icon https://cellprofiler.org/files/files/cellprofiler/files/2017_11_21-cp_logo_black_tm_4.png
+    au.imagingtools.cvl.xdg.generic-name CellProfiler
+    org.opencontainers.image.created $(date --rfc-3339=seconds --utc)
+    org.opencontainers.image.authors Dean Taylor <dean.taylor@sydney.edu.au>
+    org.opencontainers.image.url https://cellprofiler.org/home
+    org.opencontainers.image.documentation https://cellprofiler.org/manuals
+    org.opencontainers.image.source 
+    org.opencontainers.image.version 4.2.5
+    org.opencontainers.image.revision $(git -C ${CVL_SOFTWARE} rev-parse --short HEAD)
+    org.opencontainers.image.vendor The University of Sydney
+    org.opencontainers.image.licenses 
+    org.opencontainers.image.title CellProfiler
+    org.opencontainers.image.description Cell image analysis software
+
+%help
+    cellprofiler-4.2.5.sif --help

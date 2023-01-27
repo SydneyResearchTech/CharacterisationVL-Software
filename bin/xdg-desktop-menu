@@ -1,0 +1,86 @@
+#!/usr/bin/env python3
+# https://specifications.freedesktop.org/menu-spec/menu-spec-1.0.html
+# https://specifications.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html
+# https://github.com/opencontainers/image-spec/blob/main/annotations.md
+from xml.etree import ElementTree as ET
+import os
+import glob
+import subprocess
+import json
+import sys, getopt
+import configparser
+
+def newMenu(parent, name):
+    _menu = ET.SubElement(parent, "Menu")
+    ET.SubElement(_menu, "Name").text = name
+    ET.SubElement(_menu, "Directory").text = name.replace(" ","_") +".directory"
+    return ET.SubElement(_menu, "Include")
+
+def directory(name,xdgDataDir):
+    desktop = configparser.ConfigParser()
+    desktop.optionxform = str
+    desktop['Desktop Entry'] = {
+            'Name': name,
+            'Type': 'Directory',
+            }
+    with open(xdgDataDir+'/desktop-directories/'+name+'.directory','w') as f:
+        desktop.write(f,space_around_delimiters=False)
+
+def application(name,xdgDataDir,binDir):
+    application = configparser.ConfigParser()
+    application.optionxform = str
+    application['Desktop Entry'] = {
+            'Exec': binDir+'/'+name+'.sif',
+            'Name': name,
+            'Type': 'Application',
+            }
+    with open(xdgDataDir+'/applications/'+name+'.desktop','w') as f:
+        application.write(f,space_around_delimiters=False)
+
+def main(argv):
+    baseDir = '/vol/cvl'
+    opts,args = getopt.getopt(argv,"b:h",["baseDir=","help"])
+    for opt,arg in opts:
+        if opt in ("-h","--help"):
+            print('xdg-desktop-menu [-h|--help]')
+            sys.exit()
+        elif opt in ("-b","--baseDir"):
+            baseDir = arg
+    xdgConfigDir = baseDir+'/config'
+    xdgDataDir = baseDir+'/usr/share'
+    binDir = baseDir+'/bin'
+
+    subMenu = {}
+    menu = ET.Element("Menu")
+    ET.SubElement(menu, "Name").text = "Applications"
+
+    menuCvl = ET.SubElement(menu, "Menu")
+    ET.SubElement(menuCvl, "AppDir").text = xdgDataDir+"/applications"
+    ET.SubElement(menuCvl, "DirectoryDir").text = xdgDataDir+"/desktop-directories"
+    ET.SubElement(menuCvl, "Name").text = "CVL"
+    ET.SubElement(menuCvl, "Directory").text = "CVL.directory"
+    directory('CVL',xdgDataDir)
+
+    menuCvlInclude = ET.SubElement(menuCvl, "Include")
+
+    for sif in list(glob.glob(binDir+'/*.sif')):
+        _application = os.path.splitext(os.path.basename(sif))[0]
+        _desktop = os.path.splitext(os.path.basename(sif))[0]+'.desktop'
+        _labels = json.loads(subprocess.run(["apptainer","inspect","--json","--labels",sif],capture_output=True).stdout)
+        _menuName = "Archived"
+        if "au.imagingtools.cvl.xdg.generic-name" in _labels["data"]["attributes"]["labels"]:
+            _menuName = _labels["data"]["attributes"]["labels"]["au.imagingtools.cvl.xdg.generic-name"]
+        if _menuName not in subMenu:
+            directory(_menuName,xdgDataDir)
+            subMenu[_menuName] = newMenu(menuCvl, _menuName)
+        ET.SubElement(subMenu[_menuName], "Filename").text = _application+'.desktop'
+        application(_application,xdgDataDir,binDir)
+
+    with open(xdgConfigDir+'/menus/applications-merged/cvl-cvl.menu','w') as f:
+        f.write('<!DOCTYPE Menu PUBLIC "-//freedesktop//DTD Menu 1.0//EN" "http://www.freedesktop.org/standards/menu-spec/menu-1.0.dtd">')
+        ET.ElementTree(menu).write(f,'unicode')
+
+    return 0
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
