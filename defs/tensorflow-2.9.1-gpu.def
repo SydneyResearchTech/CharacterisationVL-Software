@@ -1,0 +1,19 @@
+Bootstrap: docker
+From: tensorflow/tensorflow:2.9.1-gpu
+
+%labels
+    au.imagingtools.cvl.xdg.icon
+    au.imagingtools.cvl.xdg.generic-name TensorFlow
+    au.imagingtools.cvl.xdg.Exec apptainer run --nv $SIF_PATH
+    au.imagingtools.cvl.xdg.Terminal true
+    org.opencontainers.image.created $(date --rfc-3339=seconds --utc)
+    org.opencontainers.image.authors Dean Taylor <dean.taylor@sydney.edu.au>
+    org.opencontainers.image.url https://www.tensorflow.org
+    org.opencontainers.image.documentation https://www.tensorflow.org
+    org.opencontainers.image.source https://github.com/SydneyResearchTech/CharacterisationVL-Software/tree/master/defs
+    org.opencontainers.image.version 2.9.1
+    org.opencontainers.image.revision $(git -C ${CVL_SOFTWARE} rev-parse --short HEAD)
+    org.opencontainers.image.vendor NVIDIA CORPORATION
+    org.opencontainers.image.licenses https://github.com/tensorflow/tensorflow/blob/master/LICENSE
+    org.opencontainers.image.title TensorFlow
+    org.opencontainers.image.description End-to-end machine learning platform

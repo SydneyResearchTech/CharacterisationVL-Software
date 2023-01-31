@@ -30,7 +30,7 @@ def applicationsMenu(xdgConfigDir,desktop="mate"):
 def newMenu(parent, name):
     _menu = ET.SubElement(parent, "Menu")
     ET.SubElement(_menu, "Name").text = name
-    ET.SubElement(_menu, "Directory").text = name.replace(" ","_") +".directory"
+    ET.SubElement(_menu, "Directory").text = name+".directory"
     return ET.SubElement(_menu, "Include")
 
 def directory(name,xdgDir,icon=None):
@@ -47,7 +47,7 @@ def directory(name,xdgDir,icon=None):
         desktop.write(f,space_around_delimiters=False)
     print('Created '+_file)
 
-def application(name,xdgDir,binDir,icon=None):
+def application(name,xdgDir,binDir,icon=None,labels=None):
     application = configparser.ConfigParser()
     application.optionxform = str
     application['Desktop Entry'] = {
@@ -57,6 +57,10 @@ def application(name,xdgDir,binDir,icon=None):
             }
     if icon:
         application['Desktop Entry']['Icon'] = icon
+    if "au.imagingtools.cvl.xdg.Exec" in labels:
+        application['Desktop Entry']['Exec'] = labels["au.imagingtools.cvl.xdg.Exec"].replace("$SIF_PATH",binDir+'/'+name+'.sif')
+    if "au.imagingtools.cvl.xdg.Terminal" in labels:
+        application['Desktop Entry']['Terminal'] = labels["au.imagingtools.cvl.xdg.Terminal"]
     _file = os.path.join(xdgDir,name+'.desktop')
     with open(_file,'w') as f:
         application.write(f,space_around_delimiters=False)
@@ -88,6 +92,15 @@ def getIcon(icon,destDir):
             print(e)
             _dest = None
     return(_dest)
+
+def verifyEnvironment(binDir="/vol/cvl/bin",xdgConfDir="/vol/cvl/config"):
+    with open('/etc/environment') as f:
+        if 'XDG_CONFIG_DIRS="'+xdgConfDir+':/etc/xdg"' not in f.read():
+            print('ISSUE /etc/environments must contain the following entry')
+            print('XDG_CONFIG_DIRS="'+xdgConfDir+':/etc/xdg"')
+    if binDir not in os.getenv('PATH'):
+        print('ISSUE /etc/profile.d/Z50-cvl-session.sh')
+        print('export PATH="${PATH}:'+binDir+'"')
 
 def main(argv):
     baseDir = '/vol/cvl'
@@ -147,7 +160,7 @@ def main(argv):
             directory(_menuName,xdgDesktopDirectories,_iconPath)
             subMenu[_menuName] = newMenu(menuCvl, _menuName)
         ET.SubElement(subMenu[_menuName], "Filename").text = _application+'.desktop'
-        application(_application,xdgApplications,binDir,_iconPath)
+        application(_application,xdgApplications,binDir,_iconPath,_labels)
 
     with open(os.path.join(xdgApplicationsMerged,'cvl-cvl.menu'),'w') as f:
         f.write('<!DOCTYPE Menu PUBLIC "-//freedesktop//DTD Menu 1.0//EN" "http://www.freedesktop.org/standards/menu-spec/menu-1.0.dtd">')
@@ -155,6 +168,8 @@ def main(argv):
     print("Created "+os.path.join(xdgApplicationsMerged,'cvl-cvl.menu'))
 
     applicationsMenu(xdgConfigDir,"mate")
+
+    verifyEnvironment(binDir,xdgConfigDir)
 
     return 0
 

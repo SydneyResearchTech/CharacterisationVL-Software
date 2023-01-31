@@ -16,9 +16,11 @@ BINDIR := /vol/cvl/bin
 DEFS := $(wildcard $(DEFDIR)/*.def)
 SIFS := $(subst $(DEFDIR),$(BINDIR),$(DEFS:%.def=%.sif))
 
-all: $(SIFS) $(APPTAINER_CACHEDIR)
+.PHONY : build xdg
 
-$(SIFS): $(BINDIR)/%.sif: $(DEFDIR)/%.def
+build: $(SIFS)
+
+$(SIFS): $(BINDIR)/%.sif: $(DEFDIR)/%.def $(APPTAINER_CACHEDIR)
 	$(eval IMAGE_CREATED := $(shell date --rfc-3339=seconds --utc))
 	$(eval DEFTEMP := $(shell mktemp))
 	sed \
@@ -31,3 +33,6 @@ $(SIFS): $(BINDIR)/%.sif: $(DEFDIR)/%.def
 
 $(APPTAINER_CACHEDIR) :
 	mkdir -p $(APPTAINER_CACHEDIR)
+
+xdg:
+	bin/xdg-desktop-menu -b /vol/cvl
