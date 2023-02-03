@@ -1,38 +1,33 @@
-ifndef APPTAINER_CACHEDIR
-APPTAINER_CACHEDIR := /scratch/apptainer/cache
-endif
-ifndef APPTAINER_TMPDIR
-APPTAINER_TMPDIR := $(shell mktemp -d -p /scratch)
-endif
+MACHINEID := $(shell sha1sum /etc/machine-id |cut -d' ' -f1)
+APPTAINER_CACHEDIR ?= /scratch/tmp.$(MACHINEID)/apptainer/cache
+APPTAINER_TMPDIR ?= /scratch/tmp.$(MACHINEID)/tmp
 SHELL := /bin/bash
-SLICER_VERSION := 5.2.1
-SLICER_NAME := Slicer-$(SLICER_VERSION)
-ifndef IMAGE_REVISION
-IMAGE_REVISION := $(shell git -C /scratch/CharacterisationVL-Software rev-parse --short HEAD)
-endif
+IMAGE_REVISION ?= $(shell git rev-parse --short HEAD)
 DEFDIR := defs
-BINDIR := /vol/cvl/bin
+BASEDIR ?= /vol/cvl
+BINDIR ?= $(BASEDIR)/bin
 
 DEFS := $(wildcard $(DEFDIR)/*.def)
 SIFS := $(subst $(DEFDIR),$(BINDIR),$(DEFS:%.def=%.sif))
+DEPDIRS := $(APPTAINER_CACHEDIR) $(APPTAINER_TMPDIR)
 
 .PHONY : build xdg
 
 build: $(SIFS)
 
-$(SIFS): $(BINDIR)/%.sif: $(DEFDIR)/%.def $(APPTAINER_CACHEDIR)
+$(SIFS): $(BINDIR)/%.sif: $(DEFDIR)/%.def | $(DEPDIRS)
 	$(eval IMAGE_CREATED := $(shell date --rfc-3339=seconds --utc))
 	$(eval DEFTEMP := $(shell mktemp))
 	sed \
 		-e 's/\(org.opencontainers.image.created \).*$$/\1$(IMAGE_CREATED)/' \
 		-e 's/\(org.opencontainers.image.revision \).*$$/\1$(IMAGE_REVISION)/' \
 		$< >$(DEFTEMP)
-	APPTAINER_CACHEDIR=$(APPTAINER_CACHEDIR) APPTAINER_TMPDIR=$(APPTAINER_TMPDIR) \
+	-APPTAINER_CACHEDIR=$(APPTAINER_CACHEDIR) APPTAINER_TMPDIR=$(APPTAINER_TMPDIR) \
 		apptainer build -F $@ $(DEFTEMP)
 	rm -f $(DEFTEMP)
 
-$(APPTAINER_CACHEDIR) :
-	mkdir -p $(APPTAINER_CACHEDIR)
+$(DEPDIRS) :
+	mkdir -p $@
 
 xdg:
-	bin/xdg-desktop-menu -b /vol/cvl
+	bin/xdg-desktop-menu -b $(BASEDIR)
