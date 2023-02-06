@@ -1,4 +1,4 @@
-MACHINEID := $(shell sha1sum /etc/machine-id |cut -d' ' -f1)
+MACHINEID := $(shell md5sum /etc/machine-id |cut -d' ' -f1)
 APPTAINER_CACHEDIR ?= /scratch/tmp.$(MACHINEID)/apptainer/cache
 APPTAINER_TMPDIR ?= /scratch/tmp.$(MACHINEID)/tmp
 SHELL := /bin/bash
