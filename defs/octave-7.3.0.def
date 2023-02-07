@@ -1,0 +1,19 @@
+Bootstrap: docker
+From: gnuoctave/octave:7.3.0
+
+%labels
+    au.imagingtools.cvl.xdg.icon https://raw.githubusercontent.com/gnu-octave/octave/default/etc/icons/octave-logo.svg
+    au.imagingtools.cvl.xdg.generic-name GNU Octave
+    au.imagingtools.cvl.xdg.Terminal false
+    au.imagingtools.cvl.xdg.Exec apptainer run --bind /run/user $SIF_PATH octave --gui
+    org.opencontainers.image.created $(date --rfc-3339=seconds --utc)
+    org.opencontainers.image.authors Dean Taylor <dean.taylor@sydney.edu.au>
+    org.opencontainers.image.url https://github.com/gnu-octave/octave
+    org.opencontainers.image.documentation https://wiki.octave.org/GNU_Octave_Wiki
+    org.opencontainers.image.source https://github.com/SydneyResearchTech/CharacterisationVL-Software/tree/master/defs
+    org.opencontainers.image.version 7.3.0
+    org.opencontainers.image.revision $(git -C ${CVL_SOFTWARE} rev-parse --short HEAD)
+    org.opencontainers.image.vendor The University of Sydney
+    org.opencontainers.image.licenses GPLv3
+    org.opencontainers.image.title GNU Octave
+    org.opencontainers.image.description High-level interpreted language, primarily intended for numerical computations
