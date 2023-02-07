@@ -11,6 +11,7 @@ import sys, getopt
 import configparser
 from urllib.request import urlopen
 from urllib.parse import urlparse
+import re
 
 def applicationsMenu(xdgConfigDir,desktop="mate"):
     lines = [
@@ -58,7 +59,7 @@ def application(name,xdgDir,binDir,icon=None,labels=None):
     if icon:
         application['Desktop Entry']['Icon'] = icon
     if "au.imagingtools.cvl.xdg.Exec" in labels:
-        application['Desktop Entry']['Exec'] = labels["au.imagingtools.cvl.xdg.Exec"].replace("$SIF_PATH",binDir+'/'+name+'.sif')
+        application['Desktop Entry']['Exec'] = re.sub(r'\$SIF_PATH|\$\{SIF_PATH\}',binDir+'/'+name+'.sif',labels["au.imagingtools.cvl.xdg.Exec"])
     if "au.imagingtools.cvl.xdg.Terminal" in labels:
         application['Desktop Entry']['Terminal'] = labels["au.imagingtools.cvl.xdg.Terminal"]
     _file = os.path.join(xdgDir,name+'.desktop')
