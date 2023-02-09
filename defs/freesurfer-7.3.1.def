@@ -1,0 +1,19 @@
+Bootstrap: docker
+From: freesurfer/freesurfer:7.3.1
+
+%labels
+    au.imagingtools.cvl.xdg.icon https://surfer.nmr.mgh.harvard.edu/wiki/fswiki_htdocs/common/fslogosmall.png
+    au.imagingtools.cvl.xdg.generic-name FreeSurfer
+    au.imagingtools.cvl.xdg.Exec apptainer run --bind /vol/cvl/etc/freesurfer/license.txt:/usr/local/freesurfer/.license $SIF_PATH
+    au.imagingtools.cvl.xdg.Terminal true
+    org.opencontainers.image.created $(date --rfc-3339=seconds --utc)
+    org.opencontainers.image.authors Dean Taylor <dean.taylor@sydney.edu.au>
+    org.opencontainers.image.url https://surfer.nmr.mgh.harvard.edu
+    org.opencontainers.image.documentation https://surfer.nmr.mgh.harvard.edu/fswiki
+    org.opencontainers.image.source https://github.com/SydneyResearchTech/CharacterisationVL-Software/tree/master/defs
+    org.opencontainers.image.version 7.3.1
+    org.opencontainers.image.revision $(git -C ${CVL_SOFTWARE} rev-parse --short HEAD)
+    org.opencontainers.image.vendor Harvard University
+    org.opencontainers.image.licenses https://github.com/freesurfer/freesurfer/blob/dev/LICENSE.txt
+    org.opencontainers.image.title FreeSurfer
+    org.opencontainers.image.description software suite for processing human brain MRI
