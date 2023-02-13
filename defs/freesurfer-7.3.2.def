@@ -1,0 +1,48 @@
+Bootstrap: docker
+From: ubuntu:22.04
+
+%post
+    # https://surfer.nmr.mgh.harvard.edu/fswiki/rel7downloads
+    FREESURFER_VERSION="7.3.2"
+    FREESURFER_URL="https://surfer.nmr.mgh.harvard.edu/pub/dist/freesurfer/${FREESURFER_VERSION}/freesurfer_ubuntu22-${FREESURFER_VERSION}_amd64.deb"
+    FREESURFER_MD5="c82faf14365262f926ce0ea3e2ce45d4"
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update
+    apt-get -y install \
+      build-essential \
+      wget \
+      language-pack-en libx11-dev gettext xterm x11-apps csh tcsh file bc xorg xorg-dev xserver-xorg-video-intel libncurses5 \
+      libdrm2 libegl1 libgl1 libglib2.0-0 libglu1-mesa libglu1 libglvnd0 libice6 libjpeg62 libopengl0 libsm6 \
+      libwayland-client0 libwayland-cursor0 libx11-xcb1 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 \
+      libxcb-render-util0 libxcb-render0 libxcb-shape0 libxcb-sync1 libxcb-util1 libxcb-xfixes0 libxcb-xinerama0 \
+      libxcb-xinput0 libxcb-xkb1 libxext6 libxft2 libxi6 libxkbcommon-x11-0 libxkbcommon0 libxmu6 libxrender1 \
+      libxss1 libxt6
+    [ -f /tmp/freesurfer_ubuntu22-${FREESURFER_VERSION}_amd64.deb ] || \
+      wget -O /tmp/freesurfer_ubuntu22-${FREESURFER_VERSION}_amd64.deb $FREESURFER_URL
+    md5sum /tmp/freesurfer_ubuntu22-${FREESURFER_VERSION}_amd64.deb |grep -q $FREESURFER_MD5
+    dpkg -i /tmp/freesurfer_ubuntu22-7.3.2_amd64.deb
+    rm -rf /var/lib/apt/lists/*
+
+%environment
+    export FREESURFER_VERSION="7.3.2"
+    export FREESURFER_HOME=/usr/local/freesurfer/${FREESURFER_VERSION}
+    . /usr/local/freesurfer/${FREESURFER_VERSION}/FreeSurferEnv.sh
+    export TUTORIAL_DATA=/vol/cvl/freesurfer/tutorial_data_20190918_1558
+    export SUBJECTS_DIR=$TUTORIAL_DATA/buckner_data/tutorial_subjs
+
+%labels
+    au.imagingtools.cvl.xdg.icon https://surfer.nmr.mgh.harvard.edu/wiki/fswiki_htdocs/common/fslogosmall.png
+    au.imagingtools.cvl.xdg.generic-name FreeSurfer
+    au.imagingtools.cvl.xdg.Exec apptainer run --bind /vol/cvl/etc/freesurfer/license.txt:/usr/local/freesurfer/7.3.2/.license $SIF_PATH
+    au.imagingtools.cvl.xdg.Terminal true
+    org.opencontainers.image.created $(date --rfc-3339=seconds --utc)
+    org.opencontainers.image.authors Dean Taylor <dean.taylor@sydney.edu.au>
+    org.opencontainers.image.url https://surfer.nmr.mgh.harvard.edu
+    org.opencontainers.image.documentation https://surfer.nmr.mgh.harvard.edu/fswiki
+    org.opencontainers.image.source https://github.com/SydneyResearchTech/CharacterisationVL-Software/tree/master/defs
+    org.opencontainers.image.version 7.3.2
+    org.opencontainers.image.revision $(git -C ${CVL_SOFTWARE} rev-parse --short HEAD)
+    org.opencontainers.image.vendor Harvard University
+    org.opencontainers.image.licenses https://github.com/freesurfer/freesurfer/blob/dev/LICENSE.txt
+    org.opencontainers.image.title FreeSurfer
+    org.opencontainers.image.description software suite for processing human brain MRI

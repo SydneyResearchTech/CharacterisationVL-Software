@@ -1,6 +1,13 @@
 Bootstrap: docker
 From: freesurfer/freesurfer:7.3.1
 
+%post
+    dnf install -y mesa-libGLU
+
+%environment
+    export TUTORIAL_DATA=/vol/cvl/freesurfer/tutorial_data_20190918_1558
+    export SUBJECTS_DIR=$TUTORIAL_DATA/buckner_data/tutorial_subjs
+
 %labels
     au.imagingtools.cvl.xdg.icon https://surfer.nmr.mgh.harvard.edu/wiki/fswiki_htdocs/common/fslogosmall.png
     au.imagingtools.cvl.xdg.generic-name FreeSurfer
